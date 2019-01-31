@@ -55,8 +55,8 @@ class GameBot{
 
         this.inverted = false;
 
-        this.jumpRangeLow = 13;
-        this.jumpRangeHigh = 18;
+        this.jumpRangeLow = 8;
+        this.jumpRangeHigh = 8;
     }
     blackAt(img,x,y){
         let hex = img.colorAt(x, y);
@@ -121,8 +121,7 @@ class GameBot{
             this.jumpRangeLow += 1;
             this.jumpRangeHigh += 1;
             console.log("INVERTED");
-            console.log("INVERTED");
-            console.log("INVERTED");
+            return 0;
         }
 
         if (this.logHashMap){
@@ -160,16 +159,20 @@ class GameBot{
 
         this.action();
 
-        //this.jumpRangeLow += .0000000005;
-        //this.jumpRangeHigh += .00000000005;
+        this.jumpRangeLow += .0000000005;
+        this.jumpRangeHigh += .00000000005;
     }
     action(){
         for (let i = 0; i < this.hashMapLow.length; i++){
             if (i < this.jumpRangeLow && this.hashMapLow[i] == 1){
-                DINO.jump(500);
+                DINO.jump(0,500);
+                DINO.duck(200,200);
                 break;
             } else if (i < this.jumpRangeHigh && this.hashMapHigh[i] == 1){
-                DINO.jump(500);
+                DINO.jump(0,500);
+                DINO.duck(230,200);
+                break;
+            } else if ( DINO.jumping && this.hashMapHigh[3] != 2){
                 break;
             }
 
@@ -193,29 +196,31 @@ class Dino{
             console.log(cnt,"Action: none");
         }
     }
-    jump(dur){
+    jump(del,dur){
         if (!this.jumping){
-            this.jumping = true;
-
-            robot.keyToggle("up", "down");
             setTimeout(function(){
-                this.jumping = false;
-                robot.keyToggle("up", "up");
-            }.bind(this),dur);
+                this.jumping = true;
+                robot.keyToggle("up", "down");
+                setTimeout(function(){
+                    this.jumping = false;
+                    robot.keyToggle("up", "up");
+                }.bind(this),dur);
+            }.bind(this),del);
             return true;
         } else {
             return false;
         }
     }
-    duck(dur){
+    duck(del,dur){
         if (!this.crouching){
-            this.crouching = true;
-            console.log("crouching");
-            robot.keyToggle("down", "down");
             setTimeout(function(){
-                this.crouching = false;
-                robot.keyToggle("down", "up");
-            }.bind(this),dur);
+                this.crouching = true;
+                robot.keyToggle("down", "down");
+                setTimeout(function(){
+                    this.crouching = false;
+                    robot.keyToggle("down", "up");
+                }.bind(this),dur);
+            }.bind(this),del);
         }
     }
 }
