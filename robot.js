@@ -8,17 +8,33 @@ var screenSize = robot.getScreenSize();
 var height = (screenSize.height / 2) - 10;
 var width = screenSize.width;
 let cnt = 0;
+
+const log_mouse = false;
+const LOG_HASHMAP = true;
+const LOG_HASHMAP_HOT = false;
+
+const LINE_POS = 380;
+
+const START_LINE = 740;
+const END_LINE = 1360;
+
+const IMG_LENGTH = END_LINE-START_LINE;
+const IMG_HEIGHT = 30;
+
 let inv = setInterval(function(){
-    var mouse = robot.getMousePos();
-    //console.log("Mouse is at x:" + mouse.x + " y:" + mouse.y);
+    if (log_mouse){
+        var mouse = robot.getMousePos();
+        console.log("Mouse is at x:" + mouse.x + " y:" + mouse.y);
+    }
     //var img = robot.screen.capture(0, 0, screenSize.width, screenSize.height );
-    var img = robot.screen.capture(740, 380, 1359, 381);
-    if (cnt % 200)
-        BOT.parseImage(img);
+    var img = robot.screen.capture(START_LINE, LINE_POS-IMG_HEIGHT, IMG_LENGTH, IMG_HEIGHT);
+    BOT.parseImage(img);
 
     cnt++;
 
-    if (cnt > 1000){
+
+
+    if (cnt > 100000){
         clearInterval(inv);
     }
 
@@ -28,12 +44,19 @@ let inv = setInterval(function(){
 
 class GameBot{
     constructor(){
-        this.gmLine = {x:740, y:380};
-        this.gmLineEnd = {x:1359, y:380};
+        this.logHashMap = LOG_HASHMAP;
 
-        this.hashMap = [];
-        this.t = 20;
-        this.step =  ((this.gmLineEnd.x-this.gmLine.x)/this.t);
+        this.lineLength = IMG_LENGTH;
+
+        this.hashMapLow = [];
+        this.hashMapHigh = [];
+        this.t = 9;
+        this.step =  this.lineLength/this.t;
+
+        this.inverted = false;
+
+        this.jumpRangeLow = 13;
+        this.jumpRangeHigh = 18;
     }
     blackAt(img,x,y){
         let hex = img.colorAt(x, y);
@@ -45,7 +68,7 @@ class GameBot{
         }
     }
     blackAtRange(img,x,y){
-        for (let i = x; i < x+this.t; i++){
+        for (let i = x; i < x+this.t-1; i++){
             let hex = img.colorAt(i, y);
             let rgba = hexRgb(hex);
             if ( (rgba.red+rgba.green+rgba.blue)/(768) < 0.5 ){
@@ -55,73 +78,145 @@ class GameBot{
         return false;
     }
     parseImage(img){
-        this.hashMap = [];
-
+        this.hashMapLow = [];
+        this.hashMapHigh = [];
+        let black;
+        let black_cnt = 0;
         for (let i = 0; i < this.step; i++){
-            let x = (this.gmLine.x)+this.t*i;
-            let black = this.blackAt(img,x,this.gmLine.y);
-            if ( black && x-this.gmLine.x < 30){
-                this.hashMap.push(2);
-            } else if ( black ) {
-                this.hashMap.push(1);
+            let x = this.t*i;
+
+            //HIGH
+            if (!this.inverted){
+                black = this.blackAtRange(img,x,1);
             } else {
-                this.hashMap.push(0);
-            }
-        }
-
-        let str = "";
-
-        for (let i = 0; i < this.hashMap.length; i++){
-            let e = this.hashMap[i];
-            if (e == 0){
-                str += chalk.bgWhite(" ");
-            } else if (e == 1){
-                str += chalk.bgRed(" ");
-            } else if (e == 2){
-                str += chalk.bgMagenta(" ");
+                black = !this.blackAtRange(img,x,1);
             }
 
+            if ( black && x < 50){
+                this.hashMapHigh.push(2);
+            } else if ( black ) {
+                this.hashMapHigh.push(1);
+            } else {
+                this.hashMapHigh.push(0);
+            }
+
+            //LOW
+            if (!this.inverted){
+                black = this.blackAtRange(img,x,IMG_HEIGHT-1);
+            } else {
+                black = !this.blackAtRange(img,x,IMG_HEIGHT-1);
+            }
+            if ( black && x < 50){
+                this.hashMapLow.push(2);
+            } else if ( black ) {
+                black_cnt++;
+                this.hashMapLow.push(1);
+            } else {
+                this.hashMapLow.push(0);
+            }
+
+        }
+        if (black_cnt > 20){
+            this.inverted = !this.inverted;
+            this.jumpRangeLow += 1;
+            this.jumpRangeHigh += 1;
+            console.log("INVERTED");
+            console.log("INVERTED");
+            console.log("INVERTED");
         }
 
-        console.log();
-        console.log(str);
+        if (this.logHashMap){
+            let strLow = "";
+            let strHigh = "";
+
+            for (let i = 0; i < this.hashMapLow.length; i++){
+                let eL = this.hashMapLow[i];
+                if (eL == 0){
+                    strLow += chalk.bgWhite(" ");
+                } else if (eL == 1){
+                    strLow += chalk.bgRed(" ");
+                } else if (eL == 2){
+                    strLow += chalk.bgMagenta(" ");
+                }
+
+                let eH = this.hashMapHigh[i];
+                if (eH == 0){
+                    strHigh += chalk.bgWhite(" ");
+                } else if (eH == 1){
+                    strHigh += chalk.bgCyan(" ");
+                } else if (eH == 2){
+                    strHigh += chalk.bgMagenta(" ");
+                }
+
+            }
+            if (LOG_HASHMAP_HOT){
+                console.log("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+            } else {
+                console.log();
+            }
+            console.log(strHigh);
+            console.log(strLow);
+        }
+
         this.action();
+
+        //this.jumpRangeLow += .0000000005;
+        //this.jumpRangeHigh += .00000000005;
     }
     action(){
-        for (let i = 0; i < this.hashMap.length; i++){
-            if (i < 10 && this.hashMap[i] == 1){
+        for (let i = 0; i < this.hashMapLow.length; i++){
+            if (i < this.jumpRangeLow && this.hashMapLow[i] == 1){
                 DINO.jump(500);
-
+                break;
+            } else if (i < this.jumpRangeHigh && this.hashMapHigh[i] == 1){
+                DINO.jump(500);
                 break;
             }
 
         }
-
-
+        DINO.update_log();
 
     }
 }
 
 class Dino{
     constructor(){
+        this.crouching = false;
         this.jumping = false;
+    }
+    update_log(){
+        if (this.crouching){
+            console.log(cnt,"Action: crouching");
+        } else if (this.jumping){
+            console.log(cnt,"Action: jumping");
+        } else {
+            console.log(cnt,"Action: none");
+        }
     }
     jump(dur){
         if (!this.jumping){
             this.jumping = true;
-            console.log("jump");
+
             robot.keyToggle("up", "down");
             setTimeout(function(){
                 this.jumping = false;
                 robot.keyToggle("up", "up");
             }.bind(this),dur);
+            return true;
+        } else {
+            return false;
         }
     }
-    down(dur){
-        robot.keyToggle("down", "down");
-        setTimeout(function(){
-            robot.keyToggle("down", "up");
-        }.bind(this),dur);
+    duck(dur){
+        if (!this.crouching){
+            this.crouching = true;
+            console.log("crouching");
+            robot.keyToggle("down", "down");
+            setTimeout(function(){
+                this.crouching = false;
+                robot.keyToggle("down", "up");
+            }.bind(this),dur);
+        }
     }
 }
 
