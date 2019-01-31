@@ -2,6 +2,8 @@ let robot = require("robotjs");
 const hexRgb = require('hex-rgb');
 const chalk = require('chalk');
 
+let BRAIN = require("brain");
+var net = new brain.NeuralNetwork();
 robot.setMouseDelay(2);
 
 var screenSize = robot.getScreenSize();
